@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -365,6 +364,10 @@ fieldset{border:none;padding:0;margin:0;}
       <div class="section-title">회지 제작 정보</div>
       <div class="card">
         <div class="field">
+          <label class="field-label">회지 제목</label>
+          <input class="input" id="bookTitleInput" placeholder="예: 유죄 추정의 원칙">
+        </div>
+        <div class="field">
           <label class="field-label">판형</label>
           <select class="input" id="formatSelect">
             <option value="A5">A5 (148×210mm)</option>
@@ -543,6 +546,7 @@ function buildPages(format, count){
 
 function defaultState(format, count){
   return {
+    title: '',
     format: format,
     pages: buildPages(format, count),
     spec: {
@@ -597,6 +601,7 @@ function normalizeProject(p){
   if(!p || !p.pages || !p.pages.length) return null;
   if(!p.spec) p.spec = {innerPaper:'',innerGsm:'',coverPaper:'',coverGsm:'',coating:'',coatingOther:'',finish:''};
   if(!p.costs) p.costs = [];
+  if(typeof p.title !== 'string') p.title = '';
   return p;
 }
 function migrateSavedRecord(raw){
@@ -697,6 +702,7 @@ function setPageRatioVar(){
 
 /* ---------------- render: left panel sync ---------------- */
 function syncLeftPanelFromState(){
+  document.getElementById('bookTitleInput').value = state.title || '';
   document.getElementById('formatSelect').value = state.format;
   document.getElementById('pageCountInput').value = contentCount();
   document.getElementById('specInnerPaper').value = state.spec.innerPaper || '';
@@ -1168,6 +1174,11 @@ function fullRender(){
 }
 
 function bindEvents(){
+  document.getElementById('bookTitleInput').addEventListener('input', function(e){
+    state.title = e.target.value;
+    save();
+  });
+
   document.getElementById('formatSelect').addEventListener('change', function(e){
     state.format = e.target.value;
     save(); fullRender();
@@ -1311,7 +1322,12 @@ function escapeAttr(s){
 
 /* ---------------- file download helpers ---------------- */
 function sanitizeFilename(name){
-  return String(name||'').replace(/[\\/:*?"<>|]/g,'').trim() || '회지_작업본';
+  var cleaned = String(name||'')
+    .trim()
+    .replace(/[\\/:*?"<>|]/g,'')
+    .replace(/\.html?$/i,'')
+    .trim();
+  return cleaned || '회지_작업본';
 }
 function downloadBlob(filename, content, mime){
   var blob = new Blob([content], {type: mime});
@@ -1376,7 +1392,7 @@ function exportStandaloneHtml(){
     '<script>' + dataScript + '\n' + EXPORT_VIEWER_JS + '<\/script>' +
     '</body></html>';
 
-  downloadBlob(sanitizeFilename('회지_작업본')+'.html', html, 'text/html');
+  downloadBlob(sanitizeFilename(state.title)+'.html', html, 'text/html');
   showToast('HTML로 내보냈어요.');
 }
 
@@ -1474,6 +1490,7 @@ var EXPORT_VIEWER_JS = [
       state = loaded;
       if(!state.spec) state.spec = {innerPaper:'',innerGsm:'',coverPaper:'',coverGsm:'',coating:'',coatingOther:'',finish:''};
       if(!state.costs) state.costs = [];
+      if(typeof state.title !== 'string') state.title = '';
       bindEvents();
       fullRender();
       setSaveStatus('saved');
